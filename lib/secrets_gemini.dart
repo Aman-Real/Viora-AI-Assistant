@@ -1,2 +1,2 @@
 const GEMINIAPIKey =
-    'AIzaSyAHnDHGU24d1uJhF3iRWLgZckIEKU1xCuQ';
+    'YOUR_API_KEY';
