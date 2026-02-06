@@ -8,7 +8,7 @@ class GeminiService {
     try {
       final uri = Uri.parse(
         "https://generativelanguage.googleapis.com/v1beta/models/"
-        "gemini-flash-latest:generateContent?key=AIzaSyB39I6Zr2-tHVC0WVMK51Cz9CpJ5nedChk",
+        "gemini-flash-latest:generateContent?key=YOUR_API_KEY",
       );
 
       final response = await http.post(
