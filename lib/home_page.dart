@@ -82,13 +82,11 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: BounceInDown(child: const Text('Viora')),
-        leading: const Icon(Icons.menu),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // virtual assistant picture
             ZoomIn(
               child: Stack(
                 children: [
@@ -115,7 +113,6 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            // chat bubble
             FadeInRight(
               child: Visibility(
                 visible: generatedImageUrl == null,
@@ -137,7 +134,7 @@ class _HomePageState extends State<HomePage> {
                     padding: const EdgeInsets.symmetric(vertical: 10.0),
                     child: Text(
                       generatedContent == null
-                          ? 'Good Morning, what task can I do for you?'
+                          ? 'Hi, what task can I do for you?'
                           : generatedContent!,
                       style: TextStyle(
                         fontFamily: 'Cera Pro',
@@ -176,7 +173,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            // features list
             Visibility(
               visible: generatedContent == null && generatedImageUrl == null,
               child: Column(
