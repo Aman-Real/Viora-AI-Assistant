@@ -38,7 +38,10 @@ class VoiceController extends ChangeNotifier {
 
   VoiceState state = VoiceState.idle;
   String? error;
-  double level = 0;
+
+  /// Voice loudness 0..1 for the orb. Separate notifier so the orb can
+  /// redraw ~10x a second without rebuilding the whole screen.
+  final level = ValueNotifier<double>(0);
   final List<TranscriptLine> lines = [];
 
   LiveConnection? _conn;
@@ -99,8 +102,7 @@ class VoiceController extends ChangeNotifier {
     _session++;
     await _closeAll();
     await _saveTranscript();
-    lines.clear();
-    level = 0;
+    _setLevel(0);
     _set(VoiceState.idle);
   }
 
@@ -146,22 +148,29 @@ class VoiceController extends ChangeNotifier {
       try {
         await old?.close();
       } catch (_) {}
+      if (session != _session) return; // the user pressed End meanwhile
       _set(VoiceState.connecting);
       try {
-        if (await _connect(session)) _set(VoiceState.listening);
+        if (await _connect(session) && session == _session) _set(VoiceState.listening);
       } catch (e) {
-        await _closeAll();
-        _fail(friendlyError(e));
+        if (session == _session) await _endWithError(friendlyError(e));
       }
       return;
     }
+    await _endWithError(cause == null ? 'The voice session ended.' : friendlyError(cause));
+  }
+
+  /// Session died mid-conversation: keep what was said, then show the error.
+  Future<void> _endWithError(String message) async {
+    _session++;
     await _closeAll();
-    _fail(cause == null ? 'The voice session ended.' : friendlyError(cause));
+    await _saveTranscript();
+    _fail(message);
   }
 
   void _backToListening() {
     if (state == VoiceState.speaking) {
-      level = 0;
+      _setLevel(0);
       _set(VoiceState.listening);
     }
   }
@@ -183,12 +192,14 @@ class VoiceController extends ChangeNotifier {
     }
   }
 
+  /// Saves the transcript to history once, then clears it.
   Future<void> _saveTranscript() async {
     final messages = [
       for (final l in lines)
         if (l.text.trim().isNotEmpty)
           ChatMessage(sender: l.fromUser ? Sender.user : Sender.assistant, text: l.text.trim()),
     ];
+    lines.clear();
     if (messages.isEmpty) return;
     await store.save(Conversation(mode: ConversationMode.voice, messages: messages));
   }
@@ -213,11 +224,13 @@ class VoiceController extends ChangeNotifier {
 
   void _fail(String message) {
     error = message;
-    level = 0;
+    _setLevel(0);
     _set(VoiceState.error);
   }
 
-  void _setLevel(double l) => level = l;
+  void _setLevel(double l) {
+    if (!_disposed) level.value = l;
+  }
 
   void _set(VoiceState s) {
     state = s;
@@ -233,6 +246,7 @@ class VoiceController extends ChangeNotifier {
     _disposed = true;
     _session++;
     unawaited(_closeAll());
+    level.dispose();
     super.dispose();
   }
 }

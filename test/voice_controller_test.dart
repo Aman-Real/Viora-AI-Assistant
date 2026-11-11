@@ -122,4 +122,44 @@ void main() {
     expect(ai.live?.closed ?? true, isTrue);
     expect(mic.recording, isFalse);
   });
+
+  test('a session that dies keeps its transcript and can be dismissed or restarted', () async {
+    await voice.start();
+    ai.live!
+      ..emit(const LiveTranscript(fromUser: true, text: 'Book a cab', finished: true))
+      ..emit(LiveEnded(Exception('socket closed')));
+    await settle();
+    expect(voice.state, VoiceState.error);
+    expect(mic.recording, isFalse);
+    expect(store.conversations.single.messages.single.text, 'Book a cab');
+
+    await voice.stop();
+    expect(voice.state, VoiceState.idle);
+    expect(store.conversations, hasLength(1), reason: 'transcript is saved once');
+
+    await voice.start();
+    expect(voice.state, VoiceState.listening);
+  });
+
+  test('mic level drives the orb while listening', () async {
+    await voice.start();
+    final seen = <double>[];
+    voice.level.addListener(() => seen.add(voice.level.value));
+    mic.level(0.8);
+    await settle();
+    expect(seen, [0.8]);
+  });
+
+  test('ending the call during an automatic reconnect stays ended', () async {
+    await voice.start();
+    ai.live!
+      ..closeDelay = const Duration(milliseconds: 50)
+      ..emit(const LiveEnded());
+    await settle(); // reconnect has started and is closing the old session
+    await voice.stop();
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    expect(voice.state, VoiceState.idle);
+    expect(ai.connects, 1);
+    expect(mic.recording, isFalse);
+  });
 }

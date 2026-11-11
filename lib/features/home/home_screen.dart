@@ -96,11 +96,14 @@ class HomeScreen extends StatelessWidget {
                                 child: GestureDetector(
                                   key: const Key('voice-orb'),
                                   onTap: voice.toggle,
-                                  child: VioraOrb(
-                                    size: orbSize,
-                                    level: voice.level,
-                                    mood: _mood(voice.state),
-                                    reduceMotion: reduceMotion,
+                                  child: ValueListenableBuilder<double>(
+                                    valueListenable: voice.level,
+                                    builder: (context, level, _) => VioraOrb(
+                                      size: orbSize,
+                                      level: level,
+                                      mood: _mood(voice.state),
+                                      reduceMotion: reduceMotion,
+                                    ),
                                   ),
                                 ),
                               ),

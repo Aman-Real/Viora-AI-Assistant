@@ -76,9 +76,14 @@ class NotificationReminderScheduler implements ReminderScheduler {
 
 /// Web (browsers can't schedule notifications): fires while the app is open.
 class InAppReminderScheduler implements ReminderScheduler {
-  InAppReminderScheduler({DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  InAppReminderScheduler({DateTime Function()? clock, this.maxTimer = const Duration(days: 20)})
+      : _clock = clock ?? DateTime.now;
 
   final DateTime Function() _clock;
+
+  /// Browsers fire timers longer than ~24.8 days immediately, so long waits
+  /// are split into hops of at most this length.
+  final Duration maxTimer;
   final _timers = <int, Timer>{};
   void Function(Reminder reminder)? onDue;
 
@@ -93,6 +98,10 @@ class InAppReminderScheduler implements ReminderScheduler {
     _timers.remove(reminder.id)?.cancel();
     final delay = reminder.when.difference(_clock());
     if (delay.isNegative) return;
+    if (delay > maxTimer) {
+      _timers[reminder.id] = Timer(maxTimer, () => schedule(reminder));
+      return;
+    }
     _timers[reminder.id] = Timer(delay, () {
       _timers.remove(reminder.id);
       onDue?.call(reminder);

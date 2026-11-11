@@ -65,6 +65,7 @@ class FakeLive implements LiveConnection {
   final controller = StreamController<LiveEvent>.broadcast();
   final audioSent = <Uint8List>[];
   bool closed = false;
+  Duration closeDelay = Duration.zero;
 
   void emit(LiveEvent e) => controller.add(e);
 
@@ -80,6 +81,7 @@ class FakeLive implements LiveConnection {
   @override
   Future<void> close() async {
     closed = true;
+    await Future<void>.delayed(closeDelay);
     await controller.close();
   }
 }
