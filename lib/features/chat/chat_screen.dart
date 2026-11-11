@@ -129,7 +129,7 @@ class _ChatScreenState extends State<ChatScreen> {
           IconButton(
             tooltip: 'New chat',
             icon: const Icon(Icons.add_comment_outlined),
-            onPressed: chat.sending ? null : chat.newChat,
+            onPressed: chat.newChat,
           ),
         ],
       ),

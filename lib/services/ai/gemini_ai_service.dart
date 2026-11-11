@@ -107,7 +107,8 @@ class _GeminiLive implements LiveConnection {
 
   final LiveSession _session;
   final ToolBox _tools;
-  final _events = StreamController<LiveEvent>.broadcast();
+  // Single-subscription: buffers anything that arrives before the UI listens.
+  final _events = StreamController<LiveEvent>();
   StreamSubscription<LiveServerResponse>? _sub;
 
   @override
@@ -167,6 +168,6 @@ class _GeminiLive implements LiveConnection {
   Future<void> close() async {
     await _sub?.cancel();
     await _session.close();
-    await _events.close();
+    unawaited(_events.close());
   }
 }

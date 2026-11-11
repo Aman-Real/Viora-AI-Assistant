@@ -30,15 +30,17 @@ class ChatController extends ChangeNotifier {
   Conversation get conversation => _conversation;
   List<ChatMessage> get messages => _conversation.messages;
 
-  void newChat() {
-    if (sending) return;
-    _conversation = Conversation();
-    _chat = null;
-    _notify();
-  }
+  /// Bumped whenever the open conversation changes, so a reply that is still
+  /// streaming stops writing into the screen the user has moved on from.
+  int _turn = 0;
 
-  void open(Conversation c) {
-    if (sending) return;
+  void newChat() => _switchTo(Conversation());
+
+  void open(Conversation c) => _switchTo(c);
+
+  void _switchTo(Conversation c) {
+    _turn++;
+    sending = false;
     _conversation = c;
     _chat = null;
     _notify();
@@ -49,9 +51,12 @@ class ChatController extends ChangeNotifier {
     if (sending || (prompt.isEmpty && image == null)) return;
     if (prompt.isEmpty) prompt = 'What is in this photo?';
 
+    final convo = _conversation;
+    final turn = ++_turn;
+    final epoch = store.epoch;
     final chat = _chat ??= ai.startChat(history: messages, systemPrompt: systemPrompt());
     final reply = ChatMessage(sender: Sender.assistant, isStreaming: true);
-    messages
+    convo.messages
       ..add(ChatMessage(sender: Sender.user, text: prompt, image: image))
       ..add(reply);
     sending = true;
@@ -63,22 +68,26 @@ class ChatController extends ChangeNotifier {
     });
     try {
       await for (final chunk in chat.send(prompt, image: image, imageMime: imageMime)) {
+        if (turn != _turn) break; // user switched chats: stop this reply
         reply.text += chunk;
         _notify();
       }
-      if (reply.text.trim().isEmpty) reply.text = "I couldn't come up with an answer. Could you rephrase?";
+      if (reply.text.trim().isEmpty) {
+        reply.text = turn == _turn ? "I couldn't come up with an answer. Could you rephrase?" : '(Reply stopped)';
+      }
     } catch (e) {
       debugPrint('Chat error: $e');
       reply
         ..isError = true
         ..text = friendlyError(e);
-      _chat = null; // rebuild the session from saved history next time
+      if (turn == _turn) _chat = null; // rebuild the session from saved history next time
     } finally {
       unawaited(toolSub.cancel());
       reply.isStreaming = false;
-      sending = false;
-      _conversation.updatedAt = DateTime.now();
-      await store.save(_conversation);
+      if (turn == _turn) sending = false;
+      convo.updatedAt = DateTime.now();
+      // Don't bring back a conversation the user deleted or cleared meanwhile.
+      if (store.epoch == epoch && !store.wasDeleted(convo.id)) await store.save(convo);
       _notify();
     }
   }

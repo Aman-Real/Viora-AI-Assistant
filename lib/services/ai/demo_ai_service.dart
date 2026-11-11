@@ -114,7 +114,8 @@ class _DemoLive implements LiveConnection {
     later(at + const Duration(milliseconds: 200), const LiveTurnComplete());
   }
 
-  final _events = StreamController<LiveEvent>.broadcast();
+  // Single-subscription: buffers anything that arrives before the UI listens.
+  final _events = StreamController<LiveEvent>();
   final _timers = <Timer>[];
 
   void _emit(LiveEvent e) {
@@ -135,6 +136,6 @@ class _DemoLive implements LiveConnection {
     for (final t in _timers) {
       t.cancel();
     }
-    await _events.close();
+    unawaited(_events.close());
   }
 }

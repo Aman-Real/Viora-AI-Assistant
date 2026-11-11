@@ -97,6 +97,17 @@ void main() {
       expect(photo, contains('demo mode'));
     });
 
+    test('live events that arrive before anyone listens are not lost', () async {
+      final live = await demo.connectLive(systemPrompt: '', voice: 'Kore');
+      await Future<void>.delayed(const Duration(milliseconds: 1500)); // first transcript fires at 1.2 s
+      final events = <LiveEvent>[];
+      final sub = live.events.listen(events.add);
+      await Future<void>.delayed(Duration.zero);
+      await sub.cancel();
+      await live.close();
+      expect(events.whereType<LiveTranscript>().where((e) => e.fromUser), isNotEmpty);
+    });
+
     test('demo voice session plays a scripted exchange', () async {
       final live = await demo.connectLive(systemPrompt: '', voice: 'Kore');
       final events = <LiveEvent>[];
