@@ -72,7 +72,11 @@ class VoiceController extends ChangeNotifier {
       }
       if (!await _connect(session)) return;
       final audio = await mic.start();
-      if (session != _session) return;
+      if (session != _session) {
+        // Ended while the mic was starting; release it unless a newer session owns it.
+        if (!isActive) await mic.stop();
+        return;
+      }
       _micSub = audio.listen((pcm) => _conn?.sendAudio(pcm).catchError((Object _) {}));
       _levelSub = mic.levels.listen((l) {
         if (state == VoiceState.listening) _setLevel(l);
@@ -87,12 +91,19 @@ class VoiceController extends ChangeNotifier {
 
   Future<bool> _connect(int session) async {
     final conn = await ai.connectLive(systemPrompt: systemPrompt(), voice: voice());
+    if (conn.playsAudio && session == _session) {
+      try {
+        await output.init();
+      } catch (_) {
+        await conn.close();
+        rethrow;
+      }
+    }
     if (session != _session) {
       await conn.close();
       return false;
     }
     _conn = conn;
-    if (conn.playsAudio) await output.init();
     _events = conn.events.listen(_onEvent);
     return true;
   }

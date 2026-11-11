@@ -162,4 +162,16 @@ void main() {
     expect(ai.connects, 1);
     expect(mic.recording, isFalse);
   });
+
+  test('ending while the speaker is starting releases the mic and the session', () async {
+    out.initDelay = const Duration(milliseconds: 50);
+    final starting = voice.start();
+    await settle(); // now waiting for the audio output to start
+    await voice.stop();
+    await starting;
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    expect(voice.state, VoiceState.idle);
+    expect(mic.recording, isFalse);
+    expect(ai.live!.closed, isTrue);
+  });
 }

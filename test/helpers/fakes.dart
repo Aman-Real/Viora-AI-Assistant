@@ -114,9 +114,10 @@ class FakeMic implements MicInput {
 class FakeAudioOut implements AudioOutput {
   final played = <Uint8List>[];
   int interrupts = 0;
+  Duration initDelay = Duration.zero;
 
   @override
-  Future<void> init() async {}
+  Future<void> init() => Future<void>.delayed(initDelay);
 
   @override
   void add(Uint8List pcm) => played.add(pcm);
