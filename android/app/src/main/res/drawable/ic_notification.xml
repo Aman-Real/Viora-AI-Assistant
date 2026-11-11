@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome "V" status-bar icon for reminder notifications -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2A10,10 0 1,1 12,22A10,10 0 1,1 12,2ZM7.6,8.6L10.9,15.5C11.1,15.9 11.5,16.1 12,16.1C12.5,16.1 12.9,15.9 13.1,15.5L16.4,8.6C16.7,8 16.4,7.4 15.8,7.2C15.3,7 14.7,7.2 14.5,7.7L12,13.1L9.5,7.7C9.3,7.2 8.7,7 8.2,7.2C7.6,7.4 7.3,8 7.6,8.6Z"
+        android:fillType="evenOdd"/>
+</vector>
