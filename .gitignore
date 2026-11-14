@@ -27,15 +27,11 @@ migrate_working_dir/
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
-.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
-.packages
-pubspec.lock
-android/.gradle/
-lib/secrets_gemini.dart
+/coverage/
 
 # Symbolication related
 app.*.symbols
@@ -47,3 +43,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Secrets and local config (never commit)
+firebase.env.json
+*.env.json
+!firebase.env.example.json
+google-services.json
+lib/firebase_options.dart
+.env
+
+# Local tooling
+.master-runs/
