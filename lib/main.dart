@@ -1,24 +1,19 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:viora/home_page.dart';
-import 'package:viora/pallete.dart';
+import 'package:flutter/semantics.dart';
 
-void main() {
-  runApp(const MyApp());
+import 'app.dart';
+import 'app_services.dart';
+import 'features/settings/settings_controller.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final services = await AppServices.create();
+  final settings = SettingsController(services.kv);
+  await settings.load();
+  // Accessible web build (also lets browser tests find buttons by name).
+  if (kIsWeb) SemanticsBinding.instance.ensureSemantics();
+  runApp(VioraApp(services: services, settings: settings));
 }
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Viora',
-      theme: ThemeData.light(useMaterial3: true).copyWith(
-        scaffoldBackgroundColor: Pallete.whiteColor,
-        appBarTheme: const AppBarTheme(backgroundColor: Pallete.whiteColor),
-      ),
-      home: const HomePage(),
-    );
-  }
-}
+// comment
+// comment 2

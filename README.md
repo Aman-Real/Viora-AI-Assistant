@@ -1,141 +1,128 @@
-# Viora
+<p align="center">
+  <img src="assets/brand/logo_mark.png" width="96" alt="Viora logo" />
+</p>
 
-A Flutter voice assistant. Tap the mic, speak, and Viora transcribes your speech, sends it to Google's Gemini API, and reads the answer back out loud.
+<h1 align="center">Viora</h1>
+<p align="center"><b>A real-time AI voice assistant built with Flutter and Gemini Live.</b><br/>
+Talk naturally, interrupt anytime, show it a photo, and let it set reminders for you.</p>
+
+<p align="center">
+  <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.44-02569B?logo=flutter" />
+  <img alt="Dart" src="https://img.shields.io/badge/Dart-3.12-0175C2?logo=dart" />
+  <img alt="Gemini" src="https://img.shields.io/badge/Gemini-Live%20API-7B61FF" />
+  <img alt="Platforms" src="https://img.shields.io/badge/platforms-Android%20%7C%20Web-3EE7E0" />
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-lightgrey" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/home.jpg" width="23%" alt="Home screen with the animated orb" />
+  <img src="docs/screenshots/voice.jpg" width="23%" alt="Live voice conversation" />
+  <img src="docs/screenshots/chat.jpg" width="23%" alt="Chat with a tool action" />
+  <img src="docs/screenshots/history.jpg" width="23%" alt="Conversation history" />
+</p>
 
 ## Features
 
-- **Speech to text** — on-device speech recognition via `speech_to_text`
-- **Gemini-powered replies** — prompts are sent to `gemini-flash-latest` through the Generative Language REST API
-- **Text to speech** — responses are spoken back using `flutter_tts`
-- **Animated UI** — staggered entry animations (`animate_do`) over a light, single-screen Material 3 layout
+| | |
+|---|---|
+| 🎙️ **Real-time voice** | Two-way audio streaming with the **Gemini Live API**. Viora answers out loud, can be interrupted mid-sentence, and shows live transcripts. The orb reacts to your voice level and to each state: idle, connecting, listening, speaking. |
+| 💬 **Chat with memory** | Streaming answers rendered as markdown. Each conversation keeps its context, and voice mode also gets your most recent conversation as context. |
+| 📷 **Photo Q&A** | Snap or pick a photo and ask about it (multimodal Gemini). |
+| ⚡ **Actions (function calling)** | Set and list reminders, check the date/time, get the weather (Open-Meteo), open links, search the web, call or text someone. Calls and texts always ask you first. Chat and voice share one tool registry. |
+| ⏰ **Real reminders** | Scheduled local notifications on Android, which survive reboots. The web build reminds you in-app. |
+| 🗂️ **History** | Chat and voice conversations are saved on the device. Reopen one to continue it, or delete it (with undo). |
+| 🎨 **Design** | Dark-first UI with a custom-painted animated orb, light theme, Hindi/English replies, a choice of voices, and a reduce-motion option. |
+| 🧪 **Demo mode** | With no Firebase config, Viora runs with an offline scripted AI that still uses the real tools, so anyone can try it. |
 
-## Screens
+## Architecture
 
-One screen. An assistant avatar, a chat bubble that shows either the greeting or Gemini's last reply, three feature cards that hide once a response arrives, and a floating mic button that toggles between listen and stop.
+```mermaid
+flowchart LR
+  subgraph UI[Flutter UI]
+    Home[Home + Orb] --> VoiceC[VoiceController]
+    Chat[Chat screen] --> ChatC[ChatController]
+    History --> Store[(ConversationStore)]
+    Reminders --> RS[ReminderService]
+    Settings --> SC[SettingsController]
+  end
+  VoiceC -->|PCM 24 kHz| Mic[record]
+  VoiceC -->|PCM 24 kHz| Speaker[flutter_soloud]
+  VoiceC --> AI{{AiService}}
+  ChatC --> AI
+  AI -->|Firebase AI Logic| Gemini[Gemini Live + Gemini Flash]
+  AI -.->|no config| Demo[DemoAiService]
+  AI --> Tools[ToolBox: function calling]
+  Tools --> RS --> Notif[flutter_local_notifications]
+  Tools --> Weather[Open-Meteo API]
+  Tools --> Launcher[url_launcher: links, tel, sms]
+  ChatC --> Store
+  VoiceC --> Store
+```
+
+- **Layers:** `core/` (config, theme) → `data/` (models, stores) → `services/` (AI, tools, reminders, audio) → `features/` (screens + controllers) → `widgets/`.
+- **State:** `provider` with `ChangeNotifier` controllers. Every platform dependency (AI, mic, speaker, storage, notifications, launcher, photo picker) sits behind an interface, so all tests run offline with fakes.
+- **Security:** the app ships with **no API key**. Gemini is called through Firebase AI Logic, and Firebase settings are injected at build time from a git-ignored file.
+
+## Getting started
+
+```bash
+git clone https://github.com/<you>/viora.git
+cd viora
+flutter pub get
+flutter run                      # runs in demo mode, no setup needed
+```
+
+### Connect real Gemini (Firebase AI Logic)
+
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com). Open **AI Logic**, click **Get started** and pick the **Gemini Developer API**.
+2. Add an **Android app** (`com.amandeep.viora`) and a **Web app** to the project.
+3. Copy `firebase.env.example.json` to `firebase.env.json` (git-ignored) and fill in the values from *Project settings → Your apps*.
+4. Run with the config:
+
+```bash
+flutter run --dart-define-from-file=firebase.env.json
+flutter build apk --release --dart-define-from-file=firebase.env.json
+```
+
+> Optional hardening: turn on **Firebase App Check** (Play Integrity for Play Store builds, reCAPTCHA Enterprise for web) so only your app can call Gemini.
+
+## Download
+
+Grab the APK from the [Releases](../../releases) page. To build smaller per-device APKs yourself:
+
+```bash
+flutter build apk --release --split-per-abi --dart-define-from-file=firebase.env.json
+```
+
+## Testing
+
+```bash
+flutter analyze
+flutter test        # unit + widget tests, all offline
+```
+
+Tested on a real Android phone (Realme RMX3867, Android 16), in Chromium at phone and desktop sizes, and with 45 automated tests.
+
+The tests cover the voice state machine (connect, speak, interrupt, reconnect, mic denied, stop while connecting), chat memory and error recovery, history storage limits, every tool (reminders, weather, links, call/SMS confirmation), settings, the demo AI, and widget flows for every screen. CI runs analyze, test and the web + APK builds on each push (`.github/workflows/ci.yml`).
 
 ## Project structure
 
 ```
 lib/
-├── main.dart               # App entry point, MaterialApp + light theme
-├── home_page.dart          # Main screen: STT, TTS, Gemini call, UI
-├── gemini_services.dart    # HTTP client for the Gemini generateContent endpoint
-├── features_box.dart       # Reusable feature card widget
-├── pallete.dart            # Color constants
-└── secrets_gemini.dart     # API key (gitignored)
+  core/        config (build-time flags), theme
+  data/        models, conversation store, key-value storage
+  services/    ai/ (Gemini + demo), tools/, reminders/, voice/ (mic + speaker), platform/
+  features/    home, chat, history, reminders, settings, onboarding, voice controller
+  widgets/     animated orb, shared UI
+test/          fakes + unit and widget tests
 ```
 
-## Getting started
+## Roadmap
 
-### Prerequisites
+- Wake word ("Hey Viora") and an Android home-screen widget
+- Cloud sync of history with Firebase Auth + Firestore
+- Grounded answers with Google Search
 
-- Flutter SDK 3.x with Dart 3 (the code uses `super.key`)
-- A Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
-- A physical device or emulator with a working microphone — speech recognition does not work reliably on some emulators
+## Credits
 
-### Install
-
-```bash
-git clone <your-repo-url>
-cd viora
-flutter pub get
-```
-
-### Dependencies
-
-Make sure `pubspec.yaml` includes:
-
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-  http: ^1.2.0
-  speech_to_text: ^7.0.0
-  flutter_tts: ^4.0.2
-  animate_do: ^3.3.4
-```
-
-And the assets and font used by the UI:
-
-```yaml
-flutter:
-  uses-material-design: true
-  assets:
-    - assets/images/virtualAssistant.png
-  fonts:
-    - family: Cera Pro
-      fonts:
-        - asset: assets/fonts/CeraPro-Regular.otf
-        - asset: assets/fonts/CeraPro-Bold.otf
-          weight: 700
-```
-
-### API key
-
-Put your key in `lib/secrets_gemini.dart`:
-
-```dart
-const GEMINIAPIKey = 'your-key-here';
-```
-
-Then add it to `.gitignore`:
-
-```
-lib/secrets_gemini.dart
-```
-
-> **Note:** `gemini_services.dart` currently has the key pasted directly into the request URL and never imports `secrets_gemini.dart`. Wire it up before shipping — see [Known issues](#known-issues).
-
-### Permissions
-
-**Android** — `android/app/src/main/AndroidManifest.xml`:
-
-```xml
-<uses-permission android:name="android.permission.RECORD_AUDIO"/>
-<uses-permission android:name="android.permission.INTERNET"/>
-<queries>
-    <intent>
-        <action android:name="android.speech.RecognitionService" />
-    </intent>
-    <intent>
-        <action android:name="android.intent.action.TTS_SERVICE" />
-    </intent>
-</queries>
-```
-
-Minimum SDK 21 in `android/app/build.gradle`.
-
-**iOS** — `ios/Runner/Info.plist`:
-
-```xml
-<key>NSMicrophoneUsageDescription</key>
-<string>Viora needs the microphone to hear your questions.</string>
-<key>NSSpeechRecognitionUsageDescription</key>
-<string>Viora needs speech recognition to understand you.</string>
-```
-
-### Run
-
-```bash
-flutter run
-```
-
-## How it works
-
-1. `initState` initializes both the speech recognizer and the TTS engine.
-2. First mic tap calls `startListening()`; recognized words stream into `lastWords`.
-3. Second tap sends `lastWords` to `GeminiService.getResponse()`, which POSTs a `contents.parts.text` payload to the `generateContent` endpoint.
-4. The reply is pulled from `candidates[0].content.parts[0].text`, rendered in the bubble, and spoken with `flutterTts.speak()`.
-
-## Known issues
-
-- **Hardcoded API key.** The key lives in the URL string inside `gemini_services.dart` while `secrets_gemini.dart` sits unused. Import the constant and interpolate it instead — or, better, load it from `--dart-define` so it never touches source control. Note that any key bundled into a client app is extractable; a thin backend proxy is the real fix.
-- **No loading state.** There is no spinner between the tap and the response, so the UI looks frozen on slow networks.
-- **Unused image path.** `generatedImageUrl` is declared and checked throughout the widget tree but nothing ever assigns it — leftover from an image-generation feature.
-- **Stale transcript.** `lastWords` isn't cleared after a query, so a tap that picks up no speech can re-send the previous prompt.
-- **`dispose()` ordering.** `super.dispose()` is called before `speechToText.stop()` and `flutterTts.stop()`; it should come last.
-- **Brittle JSON parsing.** The response is indexed without null checks — a blocked or empty candidate throws.
-
-## License
-
-MIT — see `LICENSE`.
+Fonts: Inter and Space Grotesk (SIL Open Font License). Weather data: [Open-Meteo](https://open-meteo.com). Built by **Aman Deep**. MIT licensed.
