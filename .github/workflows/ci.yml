@@ -13,6 +13,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: 3.44.2
           cache: true
       - run: flutter pub get
       - run: flutter analyze
@@ -30,6 +31,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: 3.44.2
           cache: true
       - run: flutter pub get
       # Builds run in demo mode: no Firebase secrets are needed in CI.
