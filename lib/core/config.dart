@@ -15,6 +15,12 @@ abstract final class AppConfig {
     defaultValue: 'gemini-2.5-flash-native-audio-preview-09-2025',
   );
 
+  /// Firebase AI Logic only answers apps that pass App Check. A debug token
+  /// registered in the Firebase console authorises personal and test builds;
+  /// without one, Android uses Play Integrity and web uses reCAPTCHA Enterprise.
+  static const appCheckDebugToken = String.fromEnvironment('APP_CHECK_DEBUG_TOKEN');
+  static const recaptchaSiteKey = String.fromEnvironment('RECAPTCHA_ENTERPRISE_SITE_KEY');
+
   static const _projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
   static const _senderId = String.fromEnvironment('FIREBASE_SENDER_ID');
   static const _androidApiKey = String.fromEnvironment('FIREBASE_ANDROID_API_KEY');

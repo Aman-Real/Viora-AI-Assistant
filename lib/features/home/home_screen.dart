@@ -272,6 +272,16 @@ class _StatusLine extends StatelessWidget {
   }
 }
 
+/// The end of [text], cut at a word, so a long answer shows what is being
+/// said now instead of pushing the newest words off the screen.
+String latestWords(String text, int max) {
+  final t = text.trim();
+  if (t.length <= max) return t;
+  final tail = t.substring(t.length - max);
+  final space = tail.indexOf(' ');
+  return '…${space < 0 ? tail : tail.substring(space + 1)}';
+}
+
 class _Transcript extends StatelessWidget {
   const _Transcript({required this.voice});
   final VoiceController voice;
@@ -280,7 +290,7 @@ class _Transcript extends StatelessWidget {
   Widget build(BuildContext context) {
     if (voice.lines.isEmpty) return const SizedBox(height: 24);
     final theme = Theme.of(context);
-    final shown = voice.lines.length > 3 ? voice.lines.sublist(voice.lines.length - 3) : voice.lines;
+    final shown = voice.lines.length > 2 ? voice.lines.sublist(voice.lines.length - 2) : voice.lines;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
@@ -289,7 +299,7 @@ class _Transcript extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                line.text.trim(),
+                latestWords(line.text, line.fromUser ? 100 : 160),
                 textAlign: TextAlign.center,
                 style: line.fromUser
                     ? theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)

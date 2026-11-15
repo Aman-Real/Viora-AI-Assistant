@@ -268,7 +268,10 @@ String friendlyError(Object e) {
   if (s.contains('SocketException') || s.contains('Failed host lookup') || s.contains('ClientException')) {
     return "I can't reach the internet right now. Check your connection and try again.";
   }
-  if (s.contains('PERMISSION_DENIED') || s.contains('API key') || s.contains('App Check')) {
+  if (s.contains('App Check')) {
+    return "Gemini didn't accept this build (Firebase App Check). Add an App Check debug token, as the README explains.";
+  }
+  if (s.contains('PERMISSION_DENIED') || s.contains('API key')) {
     return 'Gemini rejected the request. Check that Firebase AI Logic is enabled for this project.';
   }
   if (s.contains('quota') || s.contains('RESOURCE_EXHAUSTED') || s.contains('429')) {

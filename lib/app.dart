@@ -7,6 +7,7 @@ import 'features/chat/chat_controller.dart';
 import 'features/home/home_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/settings/settings_controller.dart';
+import 'features/voice/stop_voice_when_hidden.dart';
 import 'features/voice/voice_controller.dart';
 
 class VioraApp extends StatelessWidget {
@@ -33,7 +34,6 @@ class VioraApp extends StatelessWidget {
           create: (_) => ChatController(
             ai: services.ai,
             store: services.conversations,
-            tools: services.tools,
             systemPrompt: settings.systemPrompt,
           ),
         ),
@@ -58,6 +58,7 @@ class VioraApp extends StatelessWidget {
           theme: buildTheme(Brightness.light),
           darkTheme: buildTheme(Brightness.dark),
           themeAnimationDuration: s.reduceMotion ? Duration.zero : const Duration(milliseconds: 250),
+          builder: (context, child) => StopVoiceWhenHidden(child: child!),
           home: s.onboarded ? const HomeScreen() : const OnboardingScreen(),
         ),
       ),
