@@ -61,7 +61,7 @@ flowchart LR
 
 - **Layers:** `core/` (config, theme) → `data/` (models, stores) → `services/` (AI, tools, reminders, audio) → `features/` (screens + controllers) → `widgets/`.
 - **State:** `provider` with `ChangeNotifier` controllers. Every platform dependency (AI, mic, speaker, storage, notifications, launcher, photo picker) sits behind an interface, so all tests run offline with fakes.
-- **Security:** the app ships with **no API key**. Gemini is called through Firebase AI Logic, and Firebase settings are injected at build time from a git-ignored file.
+- **Security:** the app ships with **no Gemini API key**. Gemini is called through Firebase AI Logic and protected by Firebase App Check; Firebase settings are injected at build time from a git-ignored file.
 
 ## Getting started
 
@@ -77,14 +77,17 @@ flutter run                      # runs in demo mode, no setup needed
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com). Open **AI Logic**, click **Get started** and pick the **Gemini Developer API**.
 2. Add an **Android app** (`com.amandeep.viora`) and a **Web app** to the project.
 3. Copy `firebase.env.example.json` to `firebase.env.json` (git-ignored) and fill in the values from *Project settings → Your apps*.
-4. Run with the config:
+4. Authorise your build with **App Check** (Firebase AI Logic requires it):
+   - In the console, open **Security → App Check → Apps**, open the menu next to your app and choose **Manage debug tokens → Add debug token**. Generate a token and save it.
+   - Put the same token in `firebase.env.json` as `APP_CHECK_DEBUG_TOKEN`.
+5. Run with the config:
 
 ```bash
 flutter run --dart-define-from-file=firebase.env.json
 flutter build apk --release --dart-define-from-file=firebase.env.json
 ```
 
-> Optional hardening: turn on **Firebase App Check** (Play Integrity for Play Store builds, reCAPTCHA Enterprise for web) so only your app can call Gemini.
+> **Keep debug-token builds private.** A build made with `APP_CHECK_DEBUG_TOKEN` carries that token, so share it only with people you trust. For a public build, leave the token empty: Android then uses **Play Integrity** and web uses **reCAPTCHA Enterprise** (set `RECAPTCHA_ENTERPRISE_SITE_KEY`), both configured under *App Check → Apps*. Or publish the demo-mode build (`--dart-define=VIORA_DEMO=true`), which needs no Firebase at all.
 
 ## Download
 
@@ -101,7 +104,7 @@ flutter analyze
 flutter test        # unit + widget tests, all offline
 ```
 
-Tested on a real Android phone (Realme RMX3867, Android 16), in Chromium at phone and desktop sizes, and with 45 automated tests.
+Tested on a real Android phone (Realme RMX3867, Android 16), in Chromium at phone and desktop sizes, and with 57 automated tests.
 
 The tests cover the voice state machine (connect, speak, interrupt, reconnect, mic denied, stop while connecting), chat memory and error recovery, history storage limits, every tool (reminders, weather, links, call/SMS confirmation), settings, the demo AI, and widget flows for every screen. CI runs analyze, test and the web + APK builds on each push (`.github/workflows/ci.yml`).
 

@@ -69,6 +69,24 @@ void main() {
     expect(ai.live!.closed, isTrue);
   });
 
+  testWidgets('voice ends when the app goes to the background', (tester) async {
+    await launch(tester);
+    await tester.tap(find.byKey(const Key('voice-orb')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    final voice = tester.element(find.byType(HomeScreen)).read<VoiceController>();
+    expect(voice.state, VoiceState.listening);
+
+    // What Android reports when a call screen or another app covers Viora.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    await tester.pumpAndSettle();
+    expect(voice.state, VoiceState.idle);
+    expect(ai.live!.closed, isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  });
+
   testWidgets('chat: a suggestion sends a message and shows the streamed reply', (tester) async {
     await launch(tester);
     await tester.tap(find.textContaining('Remind me to drink water'));
@@ -161,5 +179,15 @@ void main() {
     expect(orb.reduceMotion, isTrue);
     // With motion reduced nothing keeps animating, so the frame settles.
     expect(tester.binding.hasScheduledFrame, isFalse);
+  });
+
+  test('live transcript shows only the latest words of a long answer', () {
+    expect(latestWords('  short answer ', 160), 'short answer');
+    final long = List.generate(60, (i) => 'word$i').join(' ');
+    final shown = latestWords(long, 40);
+    expect(shown, startsWith('…'));
+    expect(shown, endsWith('word59'));
+    expect(shown.length, lessThanOrEqualTo(41));
+    expect(shown.substring(1), startsWith('word'), reason: 'cut at a word boundary');
   });
 }

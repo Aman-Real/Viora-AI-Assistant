@@ -26,7 +26,7 @@ void main() {
       links: FakeLinks(),
       confirmer: FakeConfirmer(),
     );
-    chat = ChatController(ai: ai, store: store, tools: tools, systemPrompt: () => 'sys');
+    chat = ChatController(ai: ai, store: store, systemPrompt: () => 'sys');
   });
 
   test('send streams the reply and saves the conversation', () async {
@@ -129,5 +129,26 @@ void main() {
     gate.complete();
     await pending;
     expect(store.conversations, isEmpty);
+  });
+
+  test('a tool result only shows on the reply that asked for it', () async {
+    final slow = Completer<void>();
+    ai.onSend = (text) async {
+      if (text == 'first') await slow.future;
+      await tools.run('set_reminder', {'message': 'From $text', 'in_minutes': text == 'first' ? 5 : 10});
+    };
+    final first = chat.send('first');
+    await Future<void>.delayed(Duration.zero);
+    final firstReply = chat.messages.last;
+
+    chat.newChat();
+    await chat.send('second');
+    final secondReply = chat.messages.last;
+    slow.complete(); // the first chat's tool finishes after the user moved on
+    await first;
+
+    expect(secondReply.toolNotes, hasLength(1));
+    expect(firstReply.toolNotes, hasLength(1));
+    expect(firstReply.toolNotes.single, isNot(secondReply.toolNotes.single));
   });
 }

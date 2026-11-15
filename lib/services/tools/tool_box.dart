@@ -53,7 +53,25 @@ class ToolBox {
   final DateTime Function() _clock;
   final _activity = StreamController<ToolActivity>.broadcast();
 
+  /// Tool activity that no chat reply claimed (for example in voice mode).
   Stream<ToolActivity> get activity => _activity.stream;
+
+  static const _sinkKey = #vioraToolActivitySink;
+
+  /// Runs [body] so that the tools it triggers report to [onActivity] only.
+  /// Each chat reply uses this, so a tool's result chip can never land on a
+  /// different reply, even when two replies are in flight.
+  static R capture<R>(void Function(ToolActivity) onActivity, R Function() body) =>
+      runZoned(body, zoneValues: {_sinkKey: onActivity});
+
+  void _emit(ToolActivity a) {
+    final sink = Zone.current[_sinkKey];
+    if (sink is void Function(ToolActivity)) {
+      sink(a);
+    } else if (!_activity.isClosed) {
+      _activity.add(a);
+    }
+  }
 
   static final _readable = DateFormat('EEE d MMM, h:mm a');
 
@@ -163,11 +181,11 @@ class ToolBox {
     try {
       final result = await tool.handler(args);
       if (result['error'] case final String error) {
-        _activity.add(ToolActivity(name, error, ok: false));
+        _emit(ToolActivity(name, error, ok: false));
       }
       return result;
     } catch (e) {
-      _activity.add(ToolActivity(name, 'Failed: $e', ok: false));
+      _emit(ToolActivity(name, 'Failed: $e', ok: false));
       return {'error': '$e'};
     }
   }
@@ -187,7 +205,7 @@ class ToolBox {
     if (when == null) return {'error': 'I need a time: minutes from now or a clock time.'};
     try {
       final r = await reminders.add(message, when);
-      _activity.add(ToolActivity('set_reminder', 'Reminder · ${_readable.format(r.when)}'));
+      _emit(ToolActivity('set_reminder', 'Reminder · ${_readable.format(r.when)}'));
       return {'ok': true, 'message': r.message, 'scheduled_for': _readable.format(r.when)};
     } on ReminderException catch (e) {
       return {'error': e.message};
@@ -215,7 +233,7 @@ class ToolBox {
     final name = '${place['name']}, ${place['country'] ?? ''}'.trim();
     final temp = (current['temperature_2m'] as num).round();
     final sky = describeWeather((current['weather_code'] as num).toInt());
-    _activity.add(ToolActivity('get_weather', '$name · $temp°C, $sky'));
+    _emit(ToolActivity('get_weather', '$name · $temp°C, $sky'));
     return {
       'place': name,
       'temperature_c': current['temperature_2m'],
@@ -236,12 +254,12 @@ class ToolBox {
 
   Future<ToolResult> _open(Uri uri, String summary) async {
     final ok = await links.open(uri);
-    if (ok) _activity.add(ToolActivity('link', summary));
+    if (ok) _emit(ToolActivity('link', summary));
     return ok ? {'ok': true} : {'error': 'No app could open that.'};
   }
 
   ToolResult _cancelled(String what) {
-    _activity.add(ToolActivity('cancelled', '$what cancelled', ok: false));
+    _emit(ToolActivity('cancelled', '$what cancelled', ok: false));
     return {'error': 'The user cancelled.'};
   }
 

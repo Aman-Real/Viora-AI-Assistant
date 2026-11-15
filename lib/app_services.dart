@@ -1,5 +1,6 @@
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'core/config.dart';
@@ -42,6 +43,17 @@ class AppServices {
 
   bool get isDemo => ai.isDemo;
 
+  static Future<void> _activateAppCheck() {
+    final token = AppConfig.appCheckDebugToken.isEmpty ? null : AppConfig.appCheckDebugToken;
+    final debug = kDebugMode || token != null;
+    return FirebaseAppCheck.instance.activate(
+      providerAndroid: debug ? AndroidDebugProvider(debugToken: token) : const AndroidPlayIntegrityProvider(),
+      providerWeb: debug || AppConfig.recaptchaSiteKey.isEmpty
+          ? WebDebugProvider(debugToken: token)
+          : ReCaptchaEnterpriseProvider(AppConfig.recaptchaSiteKey),
+    );
+  }
+
   static Future<AppServices> create() async {
     final navigatorKey = GlobalKey<NavigatorState>();
     final messengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -51,6 +63,7 @@ class AppServices {
     if (!demo) {
       try {
         await Firebase.initializeApp(options: AppConfig.firebaseOptions);
+        await _activateAppCheck();
       } catch (e) {
         debugPrint('Firebase init failed, falling back to demo mode: $e');
         demo = true;

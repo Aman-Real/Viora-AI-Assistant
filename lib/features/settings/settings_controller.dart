@@ -65,7 +65,8 @@ class SettingsController extends ChangeNotifier {
   String systemPrompt({bool voiceMode = false, List<ChatMessage> recent = const []}) {
     final now = _clock();
     final lang = switch (language) {
-      ReplyLanguage.auto => "Reply in the user's language (English, Hindi or Hinglish).",
+      ReplyLanguage.auto =>
+        'Reply in English. Only if the user writes or speaks in another language, reply in that language instead.',
       ReplyLanguage.english => 'Always reply in English.',
       ReplyLanguage.hindi => 'Always reply in Hindi (Devanagari script) unless asked otherwise.',
     };

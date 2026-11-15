@@ -65,8 +65,9 @@ class NotificationReminderScheduler implements ReminderScheduler {
       body: reminder.message,
       scheduledDate: tz.TZDateTime.from(reminder.when, tz.local),
       notificationDetails: _details,
-      androidScheduleMode:
-          exact ? AndroidScheduleMode.exactAllowWhileIdle : AndroidScheduleMode.inexactAllowWhileIdle,
+      // alarmClock is the one mode phone makers don't delay to save battery;
+      // "exact" alarms arrived up to 45 s late for a 1-minute reminder on ColorOS.
+      androidScheduleMode: exact ? AndroidScheduleMode.alarmClock : AndroidScheduleMode.inexactAllowWhileIdle,
     );
   }
 

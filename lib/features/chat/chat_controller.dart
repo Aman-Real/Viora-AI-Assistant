@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 
 import '../../data/conversation_store.dart';
@@ -13,13 +11,11 @@ class ChatController extends ChangeNotifier {
   ChatController({
     required this.ai,
     required this.store,
-    required this.tools,
     required this.systemPrompt,
   });
 
   final AiService ai;
   final ConversationStore store;
-  final ToolBox tools;
   final String Function() systemPrompt;
 
   Conversation _conversation = Conversation();
@@ -62,16 +58,19 @@ class ChatController extends ChangeNotifier {
     sending = true;
     _notify();
 
-    final toolSub = tools.activity.listen((a) {
+    void onTool(ToolActivity a) {
       reply.toolNotes.add(a.summary);
       _notify();
-    });
+    }
+
     try {
-      await for (final chunk in chat.send(prompt, image: image, imageMime: imageMime)) {
-        if (turn != _turn) break; // user switched chats: stop this reply
-        reply.text += chunk;
-        _notify();
-      }
+      await ToolBox.capture(onTool, () async {
+        await for (final chunk in chat.send(prompt, image: image, imageMime: imageMime)) {
+          if (turn != _turn) break; // user switched chats: stop this reply
+          reply.text += chunk;
+          _notify();
+        }
+      });
       if (reply.text.trim().isEmpty) {
         reply.text = turn == _turn ? "I couldn't come up with an answer. Could you rephrase?" : '(Reply stopped)';
       }
@@ -82,7 +81,6 @@ class ChatController extends ChangeNotifier {
         ..text = friendlyError(e);
       if (turn == _turn) _chat = null; // rebuild the session from saved history next time
     } finally {
-      unawaited(toolSub.cancel());
       reply.isStreaming = false;
       if (turn == _turn) sending = false;
       convo.updatedAt = DateTime.now();
